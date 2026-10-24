@@ -5,7 +5,7 @@
 - Primeira entrega Java: núcleo financeiro isolado, BigDecimal com DECIMAL128, testes JUnit 5. Sem banco, relógio ou serviços externos no cálculo; não são necessários mocks nesse núcleo.
 - Próxima etapa escolhida: tabelas PostgreSQL antes do Angular. Históricos independentes, snapshots no envio, autorização e transações precisam sustentar a API usada pelas três telas.
 - O arquivo `.env` contém DATABASE_URL; conexão validada com SELECT 1. A migração V1 foi testada em PostgreSQL 18 isolado e aplicada em transação ao schema próprio `cotacao`, com checksum SHA256 registrado em `schema_migrations`. Nenhuma tabela preexistente foi alterada.
-- Implementados: aplicação Spring executável, API de criar/editar/consultar/enviar/listar/duplicar, repositório JDBC e transações, autorização por identidade injetável resolvida na tabela de usuários, Spring Security e CSRF. Ainda pendentes: autenticação Waffle/NTLM, decisões/auditoria pela API, cadastros de clientes/produtos pela API e frontend. O sistema ainda não representa o MVP completo.
+- Implementados: aplicação Spring executável, API de criar/editar/consultar/enviar/listar/duplicar, confirmação de decisões por item, auditoria e fila paginada do aprovador; repositório JDBC e transações, autorização por identidade injetável resolvida na tabela de usuários, Spring Security e CSRF. Ainda pendentes: autenticação Waffle/NTLM, cadastros de clientes/produtos pela API e frontend. O sistema ainda não representa o MVP completo.
 - Antes da sugestão de quantidade: esclarecer unidade da dose e precisão por produto, conforme definições futuras do README.
 
 ## Execução
@@ -87,3 +87,26 @@ Contrato em `docs/CONTRATO-API.md`; execução e exemplos em `docs/EXECUCAO.md`.
 7. Smoke HTTP do JAR real com configuração do `.env`: servidor iniciado temporariamente em loopback/porta dinâmica; GET de cotações anônimo = 401; X-Usuario/X-Perfil forjados = 401; GET CSRF = 200. Processo encerrado após a verificação. Nenhuma tabela ou dado da aplicação foi alterado nesta etapa.
 
 Próxima etapa: fluxo de decisões e auditoria, endpoints de cadastros e integração/validação Waffle/NTLM. Frontend Angular permanece posterior aos contratos da API.
+
+## Decisões e auditoria — quinta entrega, 24/10/2026
+
+Contrato em `docs/CONTRATO-APROVACAO.md`. Novas rotas: POST `/api/cotacoes/{id}/decisoes`, GET `/api/cotacoes/{id}/historico` e GET `/api/aprovacoes/pendentes`.
+
+- Confirmação exige exatamente todos os itens pendentes, com IDs únicos pertencentes à cotação e Boolean explícito. Comentário opcional, inclusive em reprovação. Ausência de confirmação nunca decide itens.
+- Apenas o aprovador da alçada atribuída decide; o Comercial e outras alçadas recebem acesso negado. O aprovador atribuído decide inclusive itens de faixas inferiores.
+- Atualizações dos itens, auditoria com autor/horário e consolidação do cabeçalho na mesma transação REPEATABLE_READ, sob bloqueio da cotação. Snapshots e parâmetros financeiros permanecem intactos. Decisões anteriores e confirmações repetidas não podem ser reescritas.
+- Estados consolidados pelo núcleo puro `EstadosCotacao`: rascunho, pendente, aprovada, reprovada e parcial, sem estados adicionais. Serviço rejeita dados persistidos incompatíveis.
+- Histórico disponível ao Comercial dono e ao aprovador atribuído, sem custos ou margens; ordenação por data e UUID. Proteções de imutabilidade do histórico já existiam na V1 e foram exercitadas, sem alteração da migração ou do schema real.
+- Fila paginada com 20 registros, restrita a cotações pendentes da alçada autenticada. Reutiliza o SQL de paginação/autorização; não há permissões de edição/duplicação para aprovadores.
+
+TDD: contratos e 37 testes novos definidos antes da implementação. RED: 121 testes, 15 falhas e 20 erros por comportamento ausente; os 84 testes anteriores continuaram verdes. Após implementação: 122 testes passando, incluindo a regressão abaixo, zero erros/falhas/ignorados.
+
+Regressão de validação JSON: o mapper aceitava `comentario: 123` e o transformava em texto, apesar de impedir outras coerções escalares. `JsonComentarioTest` foi escrito e executado primeiro: RED com 1 falha pela conversão indevida. Corrigida a política de campos textuais para rejeitar inteiro, decimal e booleano. Novo teste permanente; nenhum teste anterior foi alterado.
+
+Cobertura de banco: aprovar/reprovar/misturar, decidir somente os pendentes quando já há decisões anteriores, preservar snapshots, rejeitar IDs externos/repetidos/incompletos, impedir redecisão, usuários/perfis indevidos, metadados da auditoria, imutabilidade UPDATE/DELETE/TRUNCATE, fila e paginação, falha induzida na segunda auditoria com rollback integral e duas confirmações opostas simultâneas.
+
+Validação final: `./scripts/testar-backend.ps1 -Empacotar` em modo offline — **123 testes, zero falhas, zero erros, zero ignorados; BUILD SUCCESS**. JAR atualizado em `backend/target/cotacao-backend-0.1.0-SNAPSHOT.jar`; cluster de testes encerrado. Nenhum teste anterior foi modificado, nenhuma migração existente foi alterada e o banco do `.env` não foi acessado nesta etapa.
+
+Aceite HTTP `AprovacaoApiPostgresTest`: filtros Spring, identidade, serviço, transações e PostgreSQL reais, com sessão sintética e Clock fixo somente nos testes. Verificados CSRF, Comercial impedido de decidir, consulta sem efeitos, conjunto incompleto e Boolean ausente sem gravações, confirmação parcial, histórico com autor/horário e comentário, confidencialidade por perfil, saída da fila e reconfirmação 409.
+
+Próximas etapas: consultas de cadastros de clientes/produtos para alimentar as telas e integração/validação de Waffle/NTLM. Autenticação corporativa e frontend ainda não estão prontos; não há login ou impersonação de desenvolvimento habilitados.

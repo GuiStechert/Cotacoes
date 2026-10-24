@@ -13,3 +13,5 @@ Erros HTTP têm corpo `{codigo}`: 400 para formato/tipo/validação; 401 sem aut
 Autenticação: Spring Security exige contexto autenticado; identidade vem do SecurityContext, nunca de X-Usuario ou perfil no payload. Form login e Basic permanecem desabilitados, sem senha gerada. Não há simulador de usuário fora de testes. CSRF permanece ativo e tokens podem ser obtidos em GET `/api/csrf`; sessão autenticada é necessária para as outras rotas. A integração Waffle/NTLM ainda precisa fornecer o contexto autenticado e será tratada em etapa própria. Por padrão o servidor escuta apenas 127.0.0.1.
 
 Testes de controlador mockam somente o serviço completo. Testes de serviço/paginação exercitam PostgreSQL real isolado, mockando somente identidade e fixando o Clock. Testes de segurança usam contexto/sessão sintéticos exclusivamente no ambiente de teste.
+
+Decisões, histórico e fila de aprovação foram acrescentados conforme `docs/CONTRATO-APROVACAO.md`. JSON também rejeita números e booleanos em campos de texto, sem convertê-los silenciosamente em comentários.

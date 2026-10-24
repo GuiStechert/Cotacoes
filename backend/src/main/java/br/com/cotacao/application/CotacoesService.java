@@ -3,6 +3,7 @@ import java.time.Clock;
 import java.util.*;
 import java.math.*;
 import br.com.cotacao.domain.Financeiro;
+import br.com.cotacao.domain.EstadosCotacao;
 import br.com.cotacao.infrastructure.CotacaoRepository.*;
 import br.com.cotacao.infrastructure.CotacaoRepository;
 import org.springframework.transaction.support.TransactionOperations;
@@ -18,9 +19,55 @@ public class CotacoesService {
  public UUID criar(Entrada entrada) {
   return transacoes.execute(tx->{var usuario=usuario();comercial(usuario);var e=validar(entrada);var id=UUID.randomUUID();repository.criar(id,usuario.id(),e,clock.instant());return id;});
  }
- public Pagina listar(Filtro filtro) {
+ public void decidir(UUID id, Decisoes decisoes) {
+  transacoes.executeWithoutResult(tx->{
+   var u=usuario();aprovador(u);
+   var registro=carregar(id,true);
+   if(!registro.status().equals("PENDENTE_APROVACAO"))throw new Erro("ESTADO_INVALIDO");
+   autorizarConsulta(u,registro);
+   if(decisoes==null||decisoes.itens()==null)throw new Erro("DADOS_INVALIDOS");
+   var propostas=new LinkedHashMap<UUID,DecisaoItem>();
+   for(var decisao:decisoes.itens()){
+    if(decisao==null||decisao.itemId()==null||decisao.aprovado()==null)throw new Erro("DADOS_INVALIDOS");
+    if(propostas.putIfAbsent(decisao.itemId(),decisao)!=null)throw new Erro("DECISOES_INVALIDAS");
+   }
+   var pendentes=new HashSet<UUID>();
+   for(var item:registro.itens()){
+    if(item.status().equals("PENDENTE"))pendentes.add(item.id());
+    else if(!Set.of("APROVADO","REPROVADO").contains(item.status()))throw new Erro("ESTADO_INVALIDO");
+    else if(propostas.containsKey(item.id()))throw new Erro("ESTADO_INVALIDO");
+   }
+   if(pendentes.isEmpty())throw new Erro("ESTADO_INVALIDO");
+   if(!pendentes.equals(propostas.keySet()))throw new Erro("DECISOES_INVALIDAS");
+   var agora=clock.instant();
+   var estados=new ArrayList<String>();
+   for(var item:registro.itens()){
+    var proposta=propostas.get(item.id());
+    if(proposta==null){estados.add(item.status());continue;}
+    String estado=proposta.aprovado()?"APROVADO":"REPROVADO";
+    repository.decidirItem(id,item.id(),estado,proposta.comentario());
+    repository.registrarDecisao(item.id(),u.id(),estado,proposta.comentario(),agora);
+    estados.add(estado);
+   }
+   repository.concluir(id,EstadosCotacao.consolidar(estados),agora);
+  });
+ }
+ public List<EventoAprovacao> historico(UUID id) {
   return transacoes.execute(tx->{
-   var u=usuario();
+   var u=usuario();var r=carregar(id,false);autorizarConsulta(u,r);
+   return repository.historico(id);
+  });
+ }
+ public Pagina pendentes(int pagina, int tamanho) {
+  return transacoes.execute(tx->{
+   var u=usuario();aprovador(u);
+   return listarAutorizada(u,new Filtro(pagina,tamanho,"PENDENTE_APROVACAO",null,null,null));
+  });
+ }
+ public Pagina listar(Filtro filtro) {
+  return transacoes.execute(tx->listarAutorizada(usuario(),filtro));
+ }
+ private Pagina listarAutorizada(Usuario u,Filtro filtro) {
    var estados=Set.of("RASCUNHO","PENDENTE_APROVACAO","APROVADA","APROVADA_PARCIAL","REPROVADA");
    if(filtro==null||filtro.pagina()<0||filtro.tamanho()!=20||filtro.status()!=null&&!estados.contains(filtro.status())
       ||filtro.inicio()!=null&&filtro.fim()!=null&&filtro.fim().isBefore(filtro.inicio()))throw new Erro("DADOS_INVALIDOS");
@@ -33,7 +80,6 @@ public class CotacoesService {
    boolean comercial=u.perfil().equals("COMERCIAL");
    var resumos=registros.linhas().stream().map(r->new Resumo(r.id(),r.clienteId(),r.clienteNome(),r.solicitanteNome(),r.criadoEm(),r.status(),r.perfilAprovador(),r.precoTotal(),comercial&&r.status().equals("RASCUNHO"),comercial&&!r.status().equals("RASCUNHO"))).toList();
    return new Pagina(filtro.pagina(),20,registros.total(),registros.total()/20+(registros.total()%20==0?0:1),resumos);
-  });
  }
  public UUID duplicar(UUID id) {
   return transacoes.execute(tx->{
@@ -63,7 +109,7 @@ public class CotacoesService {
  }
  public Visao consultar(UUID id) {
   return transacoes.execute(tx->{
-   var u=usuario();var r=carregar(id,false);
+   var u=usuario();var r=carregar(id,false);autorizarConsulta(u,r);
    if(u.perfil().equals("COMERCIAL")) {
     proprio(u,r);var itens=new ArrayList<ItemComercial>();
     for(var item:r.itens()) {
@@ -84,6 +130,11 @@ public class CotacoesService {
   var u=repository.usuario(conta);if(u==null)throw new Erro("ACESSO_NEGADO");return u;
  }
  private void comercial(Usuario u){if(!u.perfil().equals("COMERCIAL"))throw new Erro("ACESSO_NEGADO");}
+ private void aprovador(Usuario u){if(!Set.of("GESTOR","SUPERVISOR","GERENTE").contains(u.perfil()))throw new Erro("ACESSO_NEGADO");}
+ private void autorizarConsulta(Usuario u,Registro r){
+  if(u.perfil().equals("COMERCIAL"))proprio(u,r);
+  else if(!u.perfil().equals(r.perfilAprovador()))throw new Erro("ACESSO_NEGADO");
+ }
  private void proprio(Usuario u,Registro r){if(!u.id().equals(r.solicitanteId()))throw new Erro("ACESSO_NEGADO");}
  private void rascunho(Registro r){if(!r.status().equals("RASCUNHO"))throw new Erro("ESTADO_INVALIDO");}
  private Registro carregar(UUID id,boolean bloquear){if(id==null)throw new Erro("DADOS_INVALIDOS");var r=repository.carregar(id,bloquear);if(r==null)throw new Erro("COTACAO_INEXISTENTE");return r;}

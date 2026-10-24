@@ -31,6 +31,9 @@ Esta entrega não oferece uma forma de login: Waffle/NTLM ainda não foi integra
 | PUT | `/api/cotacoes/{id}` | Editar rascunho, 204 |
 | POST | `/api/cotacoes/{id}/enviar` | Fixar snapshots e enviar, 204 |
 | POST | `/api/cotacoes/{id}/duplicar` | Novo rascunho independente, 201 |
+| POST | `/api/cotacoes/{id}/decisoes` | Confirmar todos os itens pendentes, 204 |
+| GET | `/api/cotacoes/{id}/historico` | Auditoria autorizada sem custos/margens |
+| GET | `/api/aprovacoes/pendentes?page=0&size=20` | Fila paginada do aprovador atribuído |
 
 Filtros opcionais da lista: `status`, `clienteId`, `inicio` e `fim` (datas ISO). Corpo de criação/edição:
 
@@ -49,4 +52,17 @@ Filtros opcionais da lista: `status`, `clienteId`, `inicio` e `fim` (datas ISO).
 
 UUIDs do exemplo devem ser substituídos por referências cadastradas. Campos extras, custos e perfis enviados pelo consumidor são rejeitados. Datas saem em ISO; erros retornam apenas `{ "codigo": "..." }`, sem SQL e credenciais.
 
-Ainda pendentes: autenticação Waffle/NTLM, decisões/auditoria pela API, cadastros de produtos/clientes pela API e frontend Angular.
+Para confirmar uma aprovação, envie os IDs de TODOS os itens pendentes, sem repetições:
+
+```json
+{
+  "itens": [
+    { "itemId": "uuid-item-1", "aprovado": true },
+    { "itemId": "uuid-item-2", "aprovado": false, "comentario": "Revisar preço" }
+  ]
+}
+```
+
+O campo `aprovado` é obrigatório; reprovar não exige comentário. Somente o perfil atribuído decide, sempre com CSRF da mesma sessão autenticada. A confirmação grava itens, autor, horário, comentário e estado final em uma transação; envio repetido ou decisão concorrente conflitante retorna 409. Detalhar, listar ou consultar histórico não aprova itens. O contrato completo está em `docs/CONTRATO-APROVACAO.md`.
+
+Ainda pendentes: autenticação Waffle/NTLM, cadastros de produtos/clientes pela API e frontend Angular.

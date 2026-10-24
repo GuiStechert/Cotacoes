@@ -5,6 +5,7 @@ import static br.com.cotacao.application.Cotacoes.*;
 import java.time.LocalDate;
 import java.net.URI;
 import java.util.UUID;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,5 +23,7 @@ public class CotacoesController {
  @PutMapping("/{id}") public ResponseEntity<Void> editar(@PathVariable UUID id,@RequestBody Entrada entrada) { service.editar(id,entrada);return ResponseEntity.noContent().build(); }
  @PostMapping("/{id}/enviar") public ResponseEntity<Void> enviar(@PathVariable UUID id) { service.enviar(id);return ResponseEntity.noContent().build(); }
  @PostMapping("/{id}/duplicar") public ResponseEntity<Criada> duplicar(@PathVariable UUID id) { return criada(service.duplicar(id)); }
+ @PostMapping("/{id}/decisoes") public ResponseEntity<Void> decidir(@PathVariable UUID id,@RequestBody Decisoes decisoes) { service.decidir(id,decisoes);return ResponseEntity.noContent().build(); }
+ @GetMapping("/{id}/historico") public List<EventoAprovacao> historico(@PathVariable UUID id) { return service.historico(id); }
  private ResponseEntity<Criada> criada(UUID id) { return ResponseEntity.created(URI.create("/api/cotacoes/"+id)).body(new Criada(id)); }
 }

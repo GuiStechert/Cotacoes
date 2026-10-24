@@ -71,4 +71,24 @@ public class CotacaoRepository {
  public void enviar(UUID id,String perfil,Instant agora) {
   jdbc.update("UPDATE cotacoes SET status='PENDENTE_APROVACAO',perfil_aprovador=?,atualizado_em=?,versao=versao+1 WHERE id=?",perfil,java.sql.Timestamp.from(agora),id);
  }
+ public void decidirItem(UUID cotacaoId,UUID itemId,String decisao,String comentario) {
+  int alterados=jdbc.update("UPDATE cotacao_itens SET status=?,comentario=? WHERE id=? AND cotacao_id=? AND status='PENDENTE'",decisao,comentario,itemId,cotacaoId);
+  if(alterados!=1)throw new Erro("ESTADO_INVALIDO");
+ }
+ public void registrarDecisao(UUID itemId,UUID usuarioId,String decisao,String comentario,Instant agora) {
+  jdbc.update("INSERT INTO historico_aprovacoes(id,item_id,usuario_id,decisao,comentario,criado_em) VALUES(?,?,?,?,?,?)",UUID.randomUUID(),itemId,usuarioId,decisao,comentario,java.sql.Timestamp.from(agora));
+ }
+ public void concluir(UUID id,String status,Instant agora) {
+  int alterados=jdbc.update("UPDATE cotacoes SET status=?,atualizado_em=?,versao=versao+1 WHERE id=? AND status='PENDENTE_APROVACAO'",status,java.sql.Timestamp.from(agora),id);
+  if(alterados!=1)throw new Erro("ESTADO_INVALIDO");
+ }
+ public List<EventoAprovacao> historico(UUID cotacaoId) {
+  return List.copyOf(jdbc.query("""
+   SELECT h.id,h.item_id,h.usuario_id,u.nome AS autor_nome,h.criado_em,h.decisao,h.comentario
+   FROM historico_aprovacoes h
+   JOIN cotacao_itens i ON i.id=h.item_id
+   JOIN usuarios u ON u.id=h.usuario_id
+   WHERE i.cotacao_id=? ORDER BY h.criado_em ASC,h.id ASC
+   """,(r,i)->new EventoAprovacao(r.getObject("id",UUID.class),r.getObject("item_id",UUID.class),r.getObject("usuario_id",UUID.class),r.getString("autor_nome"),r.getTimestamp("criado_em").toInstant(),r.getString("decisao"),r.getString("comentario")),cotacaoId));
+ }
 }

@@ -7,6 +7,10 @@ public final class Cotacoes {
  public record ItemEntrada(UUID produtoId, BigDecimal quantidade, BigDecimal preco) {}
  public record Entrada(UUID clienteId, LocalDate faturamento, LocalDate vencimento,
                        BigDecimal jurosAnual, BigDecimal areaCliente, List<ItemEntrada> itens) {}
+ public record DecisaoItem(UUID itemId, Boolean aprovado, String comentario) {}
+ public record Decisoes(List<DecisaoItem> itens) {}
+ public record EventoAprovacao(UUID id, UUID itemId, UUID usuarioId, String autorNome,
+                               Instant criadoEm, String decisao, String comentario) {}
  public sealed interface Visao permits Comercial, Aprovador {}
  public record Filtro(int pagina, int tamanho, String status, UUID clienteId, LocalDate inicio, LocalDate fim) {}
  public record Resumo(UUID id, UUID clienteId, String clienteNome, String solicitanteNome, Instant criadoEm,
