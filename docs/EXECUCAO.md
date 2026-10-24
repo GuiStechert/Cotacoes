@@ -19,7 +19,21 @@ java -jar backend/target/cotacao-backend-0.1.0-SNAPSHOT.jar
 
 Por padrão, HTTP escuta em `127.0.0.1:8080`. GET `/api/csrf` fornece um token da sessão. As rotas de cotações exigem autenticação Spring Security; escritas também exigem esse token no cabeçalho indicado pela resposta, usando a mesma sessão.
 
-Esta entrega não oferece uma forma de login: Waffle/NTLM ainda não foi integrado e validado. Assim, requisições externas recebem 401; X-Usuario, X-Perfil e Basic não concedem acesso. Os contextos autenticados utilizados na suíte existem somente nos testes. Não há usuário/senha padrão ou perfil de execução com impersonação.
+Sem ativar o SSO Windows, requisições externas continuam recebendo 401. X-Usuario, X-Perfil e Basic não concedem acesso. Não há usuário/senha padrão ou perfil de execução com impersonação. A integração Waffle/NTLM está disponível com ativação explícita, mas a homologação com Active Directory ainda é necessária.
+
+## SSO Windows
+
+```powershell
+./scripts/iniciar-backend.ps1 -WindowsSso
+```
+
+Também é possível definir `COTACAO_AUTH_WINDOWS_ENABLED=true` no ambiente do processo, ou passar `--cotacao.auth.windows.enabled=true` ao JAR. O padrão é false. A opção exige Windows, anuncia Negotiate/NTLM e não habilita Basic, convidados ou impersonação.
+
+A conta validada pelo Windows (formato DOMINIO\usuario) precisa corresponder a `usuarios.conta_windows`, com cadastro ativo, email e perfil cadastrados. Grupos do Windows não concedem alçadas; o PostgreSQL é a fonte dos perfis. Contas válidas sem cadastro ativo recebem 403. A sessão guarda apenas o nome validado, sem senha ou handle nativo.
+
+O cliente deve consultar `/api/usuario` para completar a negociação e obter seu perfil, depois `/api/csrf` na mesma sessão antes de escrever. Login inicial ou troca de conta renova o ID da sessão e invalida o CSRF anterior; renegociação da mesma conta mantém o token.
+
+Este computador não está ingressado em domínio. A validação de AD/SSO real depende de máquina/usuários corporativos, políticas de navegador e intranet, DNS e TLS definidos pela TI. Os testes simulam a fronteira de autenticação Windows; não substituem essa homologação. A aplicação continua escutando em loopback por padrão, sem alteração de firewall, registro do Windows ou políticas do navegador.
 
 ## Rotas disponíveis
 
@@ -34,6 +48,9 @@ Esta entrega não oferece uma forma de login: Waffle/NTLM ainda não foi integra
 | POST | `/api/cotacoes/{id}/decisoes` | Confirmar todos os itens pendentes, 204 |
 | GET | `/api/cotacoes/{id}/historico` | Auditoria autorizada sem custos/margens |
 | GET | `/api/aprovacoes/pendentes?page=0&size=20` | Fila paginada do aprovador atribuído |
+| GET | `/api/clientes` | Cadastro de clientes para consulta |
+| GET | `/api/produtos` | Metadados dos produtos; custo real somente para aprovadores |
+| GET | `/api/usuario` | ID, nome e perfil do próprio usuário ativo |
 
 Filtros opcionais da lista: `status`, `clienteId`, `inicio` e `fim` (datas ISO). Corpo de criação/edição:
 
@@ -65,4 +82,6 @@ Para confirmar uma aprovação, envie os IDs de TODOS os itens pendentes, sem re
 
 O campo `aprovado` é obrigatório; reprovar não exige comentário. Somente o perfil atribuído decide, sempre com CSRF da mesma sessão autenticada. A confirmação grava itens, autor, horário, comentário e estado final em uma transação; envio repetido ou decisão concorrente conflitante retorna 409. Detalhar, listar ou consultar histórico não aprova itens. O contrato completo está em `docs/CONTRATO-APROVACAO.md`.
 
-Ainda pendentes: autenticação Waffle/NTLM, cadastros de produtos/clientes pela API e frontend Angular.
+Os catálogos são somente leitura. Produtos inativos permanecem na consulta com `ativo=false`, para identificar produtos de cotações históricas; novas inclusões continuam bloqueadas pelo backend. O catálogo Comercial não retorna custo real nem consulta sua tabela. O catálogo do aprovador retorna somente o custo real vigente, sem expor todo o histórico.
+
+Ainda pendentes: homologação corporativa Waffle/NTLM, integração/atualização dos cadastros e frontend Angular. Unidade e precisão da sugestão de quantidade ainda precisam ser definidas antes da implementação desse cálculo na interface.

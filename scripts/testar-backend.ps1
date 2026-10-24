@@ -2,7 +2,8 @@ param(
  [string]$JavaHome = 'C:\Program Files\Java\jdk-25.0.4.1',
  [string]$PostgresBin = 'C:\Program Files\PostgreSQL\18\bin',
  [switch]$BaixarDependencias,
- [switch]$Empacotar
+ [switch]$Empacotar,
+ [string]$Testes
 )
 $ErrorActionPreference = 'Stop'
 Push-Location (Split-Path $PSScriptRoot -Parent)
@@ -19,6 +20,7 @@ try {
  try {
   $opcoes = @('-o')
   if ($BaixarDependencias) { $opcoes = @() }
+  if ($Testes) { $opcoes += "-Dtest=$Testes" }
   $alvo = if ($Empacotar) { 'package' } else { 'test' }
   & $maven @opcoes -f backend/pom.xml '-Dmaven.repo.local=.tools/repository' $alvo
   $resultado = $LASTEXITCODE

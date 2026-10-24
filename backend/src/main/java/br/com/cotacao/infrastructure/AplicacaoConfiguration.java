@@ -20,6 +20,10 @@ public class AplicacaoConfiguration {
  @Bean public Identidade identidade() { return new IdentidadeSpring(); }
  @Bean @Primary public ObjectMapper objectMapper() { return JsonConfig.mapper(); }
  @Bean public CotacaoRepository repository(JdbcTemplate jdbc) { return new CotacaoRepository(jdbc); }
+ @Bean public CatalogoRepository catalogoRepository(JdbcTemplate jdbc) { return new CatalogoRepository(jdbc); }
+ @Bean public CatalogoService catalogoService(CatalogoRepository repository,TransactionTemplate tx,Identidade identidade) {
+  return new CatalogoService(repository,tx,identidade);
+ }
  @Bean public TransactionTemplate transacoes(DataSource ds) {
   var tx=new TransactionTemplate(new DataSourceTransactionManager(ds));
   tx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);

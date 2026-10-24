@@ -1,4 +1,4 @@
-param([string]$JavaHome='C:\Program Files\Java\jdk-25.0.4.1')
+param([string]$JavaHome='C:\Program Files\Java\jdk-25.0.4.1',[switch]$WindowsSso)
 $ErrorActionPreference='Stop'
 Push-Location (Split-Path $PSScriptRoot -Parent)
 $anterior=[Environment]::GetEnvironmentVariable('DATABASE_URL','Process')
@@ -10,7 +10,9 @@ try {
   if (!$linha) { throw 'DATABASE_URL não definida no ambiente nem no .env.' }
   $env:DATABASE_URL=($linha -replace '^\s*DATABASE_URL\s*=\s*','').Trim().Trim('"').Trim("'")
  }
- & "$JavaHome/bin/java.exe" -jar $jar
+ $argumentos=@('-jar',$jar)
+ if ($WindowsSso) { $argumentos += '--cotacao.auth.windows.enabled=true' }
+ & "$JavaHome/bin/java.exe" @argumentos
  if ($LASTEXITCODE -ne 0) { throw 'O backend encerrou com erro.' }
 } finally {
  if ($null -eq $anterior) { Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue }

@@ -5,7 +5,7 @@
 - Primeira entrega Java: núcleo financeiro isolado, BigDecimal com DECIMAL128, testes JUnit 5. Sem banco, relógio ou serviços externos no cálculo; não são necessários mocks nesse núcleo.
 - Próxima etapa escolhida: tabelas PostgreSQL antes do Angular. Históricos independentes, snapshots no envio, autorização e transações precisam sustentar a API usada pelas três telas.
 - O arquivo `.env` contém DATABASE_URL; conexão validada com SELECT 1. A migração V1 foi testada em PostgreSQL 18 isolado e aplicada em transação ao schema próprio `cotacao`, com checksum SHA256 registrado em `schema_migrations`. Nenhuma tabela preexistente foi alterada.
-- Implementados: aplicação Spring executável, API de criar/editar/consultar/enviar/listar/duplicar, confirmação de decisões por item, auditoria e fila paginada do aprovador; repositório JDBC e transações, autorização por identidade injetável resolvida na tabela de usuários, Spring Security e CSRF. Ainda pendentes: autenticação Waffle/NTLM, cadastros de clientes/produtos pela API e frontend. O sistema ainda não representa o MVP completo.
+- Implementados: aplicação Spring executável, API de cotações/decisões/auditoria/fila e consultas de clientes/produtos/usuário; JDBC e transações, autorização pelo cadastro ativo no PostgreSQL, Spring Security, CSRF e integração Waffle/NTLM com ativação explícita. Ainda pendentes: homologação corporativa de SSO, integração/atualização dos cadastros e frontend. O sistema ainda não representa o MVP completo.
 - Antes da sugestão de quantidade: esclarecer unidade da dose e precisão por produto, conforme definições futuras do README.
 
 ## Execução
@@ -110,3 +110,26 @@ Validação final: `./scripts/testar-backend.ps1 -Empacotar` em modo offline —
 Aceite HTTP `AprovacaoApiPostgresTest`: filtros Spring, identidade, serviço, transações e PostgreSQL reais, com sessão sintética e Clock fixo somente nos testes. Verificados CSRF, Comercial impedido de decidir, consulta sem efeitos, conjunto incompleto e Boolean ausente sem gravações, confirmação parcial, histórico com autor/horário e comentário, confidencialidade por perfil, saída da fila e reconfirmação 409.
 
 Próximas etapas: consultas de cadastros de clientes/produtos para alimentar as telas e integração/validação de Waffle/NTLM. Autenticação corporativa e frontend ainda não estão prontos; não há login ou impersonação de desenvolvimento habilitados.
+
+## Catálogos e integração Windows — sexta entrega, 24/10/2026
+
+Contratos em `docs/CONTRATO-CATALOGOS.md` e `docs/CONTRATO-WINDOWS.md`.
+
+- GET `/api/clientes`, `/api/produtos` e `/api/usuario`, somente para usuários cadastrados ativos. Ordenação estável, metadados agronômicos preservados e produtos inativos identificáveis para consultas históricas. Comercial recebe DTO sem campo real e consulta SQL sem acesso ao histórico real. Aprovador recebe último custo real por data/UUID, incluindo nulo se ausente.
+- Waffle 3.7.0 oficial, módulo Spring Security 6/Jakarta; fontes inspecionados e versão publicada confirmada no Maven Central. Ativação via `-WindowsSso` no inicializador ou propriedade `cotacao.auth.windows.enabled=true`. Desativado por padrão.
+- Provider apenas Negotiate/NTLM, sem Basic/convidado/impersonação. Perfil de negócio vem do PostgreSQL por conta FQN; grupos Windows não são usados como alçadas. Sessão persiste identidade simples sem senha ou handle nativo, com rotação de sessão/CSRF apenas no login inicial ou troca de conta. Registro Servlet do filtro desabilitado para evitar execução duplicada fora da cadeia Spring.
+- Inspeção local somente leitura: PartOfDomain=false. SSO corporativo não pode ser homologado neste computador fora do domínio; permanece dependente de ambiente AD, políticas de navegador, DNS e TLS. Nenhuma política do Windows foi alterada.
+
+### TDD e regressões
+
+- Catálogos: 14 testes escritos antes da implementação. Após corrigir o classpath, RED em 138 testes: 6 falhas e 8 erros por comportamento de catálogo ausente; os 123 anteriores e a nova regressão de dependências passaram.
+- Regressão do classpath: a dependência Waffle excluía spring-jcl no caminho escolhido pelo Maven. Após excluir commons-logging duplicado, faltava LogFactory. Novo `WaffleDependenciasTest` escrito e executado primeiro: RED com ClassNotFoundException; corrigido o POM com spring-jcl explícito. A primeira execução com falhas de configuração não foi contabilizada como RED funcional dos catálogos.
+- Windows: contratos e 22 testes definidos antes da implementação. Durante preparação, corrigidos os mocks para as assinaturas reais da biblioteca e para sobrescrever resposta excepcional sem executá-la; expectativas não alteradas. RED válido: 22 testes, 17 falhas e 1 erro pelos contratos ainda ausentes. Implementado somente após esse RED.
+- GREEN focado: `./scripts/testar-backend.ps1 -Testes 'CatalogoServiceTest,CatalogosControllerTest,WaffleDependenciasTest,FiltroWindowsTest,WaffleConfigurationTest,WaffleApiPostgresTest'` — 37 testes, zero falhas/erros/ignorados.
+- Aceite integrado: Waffle real na cadeia Spring e PostgreSQL real, simulando somente a fronteira externa de validação Windows. Verificados conta persistida, perfil do banco, consultas por perfil, conta não cadastrada/inativa, convidados, Basic e cabeçalhos forjados, CSRF e renegociação sem invalidar o token da mesma conta.
+
+Validação completa: `./scripts/testar-backend.ps1 -Empacotar` — **160 testes, zero falhas, zero erros, zero ignorados; BUILD SUCCESS**. JAR atualizado e cluster de testes encerrado. Testes anteriores preservados; nenhuma migração ou dado do banco da aplicação foi alterado.
+
+Smoke nativo do JAR: execução temporária em Windows/loopback/porta dinâmica com `--cotacao.auth.windows.enabled=true`, provider nativo real e DATABASE_URL fictícia, sem credenciais de usuários. Confirmados 401 com desafios Negotiate/NTLM (sem Basic), rejeição 401 de token inválido e de Basic/cabeçalho forjado. Processo encerrado depois da verificação. Isso valida carga do componente nativo e comportamento negativo do protocolo, não um login corporativo positivo.
+
+Próxima etapa: frontend Angular com exatamente três telas e paleta ADM. A homologação AD continua dependente de ambiente corporativo; unidade/conversão e precisão da quantidade recomendada precisam ser esclarecidas antes de implementar sua sugestão. O restante das telas pode progredir de forma independente dessas definições.
