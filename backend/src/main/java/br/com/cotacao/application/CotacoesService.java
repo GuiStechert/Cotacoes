@@ -18,6 +18,31 @@ public class CotacoesService {
  public UUID criar(Entrada entrada) {
   return transacoes.execute(tx->{var usuario=usuario();comercial(usuario);var e=validar(entrada);var id=UUID.randomUUID();repository.criar(id,usuario.id(),e,clock.instant());return id;});
  }
+ public Pagina listar(Filtro filtro) {
+  return transacoes.execute(tx->{
+   var u=usuario();
+   var estados=Set.of("RASCUNHO","PENDENTE_APROVACAO","APROVADA","APROVADA_PARCIAL","REPROVADA");
+   if(filtro==null||filtro.pagina()<0||filtro.tamanho()!=20||filtro.status()!=null&&!estados.contains(filtro.status())
+      ||filtro.inicio()!=null&&filtro.fim()!=null&&filtro.fim().isBefore(filtro.inicio()))throw new Erro("DADOS_INVALIDOS");
+   java.time.Instant inicio,fim;
+   try {
+    inicio=filtro.inicio()==null?null:filtro.inicio().atStartOfDay(clock.getZone()).toInstant();
+    fim=filtro.fim()==null?null:filtro.fim().plusDays(1).atStartOfDay(clock.getZone()).toInstant();
+   } catch(java.time.DateTimeException ex){throw new Erro("DADOS_INVALIDOS");}
+   var registros=repository.listar(u,filtro,inicio,fim);
+   boolean comercial=u.perfil().equals("COMERCIAL");
+   var resumos=registros.linhas().stream().map(r->new Resumo(r.id(),r.clienteId(),r.clienteNome(),r.solicitanteNome(),r.criadoEm(),r.status(),r.perfilAprovador(),r.precoTotal(),comercial&&r.status().equals("RASCUNHO"),comercial&&!r.status().equals("RASCUNHO"))).toList();
+   return new Pagina(filtro.pagina(),20,registros.total(),registros.total()/20+(registros.total()%20==0?0:1),resumos);
+  });
+ }
+ public UUID duplicar(UUID id) {
+  return transacoes.execute(tx->{
+   var u=usuario();comercial(u);var original=carregar(id,false);proprio(u,original);
+   if(original.status().equals("RASCUNHO"))throw new Erro("ESTADO_INVALIDO");
+   var entrada=validar(original.entrada());var novo=UUID.randomUUID();
+   repository.criar(novo,u.id(),entrada,clock.instant());return novo;
+  });
+ }
  public void editar(UUID id, Entrada entrada) {
   transacoes.executeWithoutResult(tx->{var u=usuario();comercial(u);var r=carregar(id,true);proprio(u,r);rascunho(r);repository.editar(id,validar(entrada),clock.instant());});
  }

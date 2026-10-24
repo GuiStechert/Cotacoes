@@ -10,12 +10,38 @@ public class CotacaoRepository {
  public record Custos(BigDecimal comercial,BigDecimal real) {}
  public record Item(UUID id,UUID produtoId,BigDecimal quantidade,BigDecimal preco,BigDecimal custo,BigDecimal custoReal,BigDecimal margem,BigDecimal margemReal,String status) {}
  public record Registro(UUID id,UUID solicitanteId,Entrada entrada,String status,String perfilAprovador,List<Item> itens) {}
+ public record LinhaResumo(UUID id,UUID clienteId,String clienteNome,String solicitanteNome,Instant criadoEm,
+                            String status,String perfilAprovador,BigDecimal precoTotal) {}
+ public record Listagem(long total,List<LinhaResumo> linhas) {}
  public CotacaoRepository(JdbcTemplate jdbc) { this.jdbc=Objects.requireNonNull(jdbc); }
  public Usuario usuario(String conta) {
   return jdbc.query("SELECT id,perfil FROM usuarios WHERE lower(conta_windows)=lower(?) AND ativo=true",(r,i)->new Usuario(r.getObject("id",UUID.class),r.getString("perfil")),conta).stream().findFirst().orElse(null);
  }
  public boolean clienteExiste(UUID id) { return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM clientes WHERE id=?)",Boolean.class,id)); }
  public boolean produtoAtivo(UUID id) { return Boolean.TRUE.equals(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM produtos WHERE id=? AND ativo=true)",Boolean.class,id)); }
+ public Listagem listar(Usuario usuario,Filtro filtro,Instant inicio,Instant fimExclusivo) {
+  var condicoes=new StringBuilder(" WHERE ");
+  var parametros=new ArrayList<Object>();
+  if(usuario.perfil().equals("COMERCIAL")) {
+   condicoes.append("c.solicitante_id=?");parametros.add(usuario.id());
+  } else {
+   condicoes.append("c.perfil_aprovador=?");parametros.add(usuario.perfil());
+  }
+  if(filtro.status()!=null){condicoes.append(" AND c.status=?");parametros.add(filtro.status());}
+  if(filtro.clienteId()!=null){condicoes.append(" AND c.cliente_id=?");parametros.add(filtro.clienteId());}
+  if(inicio!=null){condicoes.append(" AND c.criado_em>=?");parametros.add(java.sql.Timestamp.from(inicio));}
+  if(fimExclusivo!=null){condicoes.append(" AND c.criado_em<?");parametros.add(java.sql.Timestamp.from(fimExclusivo));}
+  long total=jdbc.queryForObject("SELECT count(*) FROM cotacoes c"+condicoes,Long.class,parametros.toArray());
+  parametros.add(20);parametros.add((long)filtro.pagina()*20);
+  var linhas=jdbc.query("""
+   SELECT c.id,c.cliente_id,cl.nome AS cliente_nome,u.nome AS solicitante_nome,
+          c.criado_em,c.status,c.perfil_aprovador,
+          COALESCE((SELECT sum(i.preco*i.quantidade) FROM cotacao_itens i WHERE i.cotacao_id=c.id),0) AS preco_total
+   FROM cotacoes c JOIN clientes cl ON cl.id=c.cliente_id JOIN usuarios u ON u.id=c.solicitante_id
+   """+condicoes+" ORDER BY c.criado_em DESC,c.id DESC LIMIT ? OFFSET ?",
+   (r,i)->new LinhaResumo(r.getObject("id",UUID.class),r.getObject("cliente_id",UUID.class),r.getString("cliente_nome"),r.getString("solicitante_nome"),r.getTimestamp("criado_em").toInstant(),r.getString("status"),r.getString("perfil_aprovador"),r.getBigDecimal("preco_total")),parametros.toArray());
+  return new Listagem(total,List.copyOf(linhas));
+ }
  public void criar(UUID id,UUID usuario,Entrada e,Instant agora) {
   jdbc.update("INSERT INTO cotacoes(id,cliente_id,solicitante_id,data_faturamento,data_vencimento,juros_anual,area_cliente,criado_em,atualizado_em) VALUES(?,?,?,?,?,?,?,?,?)",id,e.clienteId(),usuario,e.faturamento(),e.vencimento(),e.jurosAnual(),e.areaCliente(),java.sql.Timestamp.from(agora),java.sql.Timestamp.from(agora));
   inserirItens(id,e.itens());

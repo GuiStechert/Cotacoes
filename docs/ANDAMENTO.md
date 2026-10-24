@@ -5,7 +5,7 @@
 - Primeira entrega Java: núcleo financeiro isolado, BigDecimal com DECIMAL128, testes JUnit 5. Sem banco, relógio ou serviços externos no cálculo; não são necessários mocks nesse núcleo.
 - Próxima etapa escolhida: tabelas PostgreSQL antes do Angular. Históricos independentes, snapshots no envio, autorização e transações precisam sustentar a API usada pelas três telas.
 - O arquivo `.env` contém DATABASE_URL; conexão validada com SELECT 1. A migração V1 foi testada em PostgreSQL 18 isolado e aplicada em transação ao schema próprio `cotacao`, com checksum SHA256 registrado em `schema_migrations`. Nenhuma tabela preexistente foi alterada.
-- Implementados: repositório JDBC e serviço Java transacional para criar, editar, consultar e enviar cotações; autorização por identidade injetável resolvida na tabela de usuários. Ainda pendentes: configuração da aplicação Spring executável, API REST, Waffle/NTLM, paginação, duplicação, decisões/auditoria e frontend. A estrutura inicial não representa o MVP completo.
+- Implementados: aplicação Spring executável, API de criar/editar/consultar/enviar/listar/duplicar, repositório JDBC e transações, autorização por identidade injetável resolvida na tabela de usuários, Spring Security e CSRF. Ainda pendentes: autenticação Waffle/NTLM, decisões/auditoria pela API, cadastros de clientes/produtos pela API e frontend. O sistema ainda não representa o MVP completo.
 - Antes da sugestão de quantidade: esclarecer unidade da dose e precisão por produto, conforme definições futuras do README.
 
 ## Execução
@@ -64,3 +64,26 @@ TDD: 18 novos testes definidos antes da implementação; RED observado em execu�
 Comando: `./scripts/testar-backend.ps1`. Evidência detalhada: `backend/target/surefire-reports`. O redirecionamento externo do script ficou sem progresso e foi interrompido; as execuções diretas concluíram normalmente. Não foi necessário acessar ou alterar o banco do `.env` nesta etapa.
 
 Limites desta entrega: serviço e repositório testados, ainda sem servidor HTTP/configuração de injeção Spring executável. A identidade simulada existe somente nos testes. Próxima etapa: API REST e autenticação/identidade confiável, listagem paginada e duplicação; depois decisões e Angular.
+
+## API e aplicação executável — quarta entrega, 24/10/2026
+
+Contrato em `docs/CONTRATO-API.md`; execução e exemplos em `docs/EXECUCAO.md`.
+
+- API REST para criação, edição, detalhe, envio e duplicação. Retornos 201/204 e Location nas criações; erros de domínio/conversão/concorrência mapeados para HTTP sem detalhes de infraestrutura.
+- Listagem paginada no PostgreSQL com 20 linhas, total, ordenação estável, filtros por estado/cliente/período e autorização incorporada ao SQL. Resumos não contêm custos nem margens; ações disponíveis dependem do estado/perfil.
+- Duplicação cria novos IDs e rascunho independente, sem custos/margens/decisões/comentários herdados. Original e histórico preservados; cadastro atual validado.
+- Configuração Spring com JDBC/transações REPEATABLE_READ, Clock America/Cuiaba, JSON estrito e identidade oriunda do SecurityContext. JPA não é inicializado neste fluxo JDBC. Sem criação automática de tabelas no startup.
+- Segurança: escuta padrão apenas em 127.0.0.1, sem Basic/form login ou senha gerada. Cabeçalhos de identidade/perfil são ignorados; requisições sem contexto autenticado recebem 401. Escritas exigem CSRF da mesma sessão. Waffle/NTLM continua pendente e não há login de desenvolvimento.
+- DATABASE_URL convertido para URL JDBC sem senha na URL. Credenciais separadas; suporte a escapes e à senha legada contendo @. Erros de configuração possuem mensagem genérica. Inicializador lê o `.env` sem imprimir nem passar credenciais na linha de comando.
+
+### Evidência TDD e aceite
+
+1. Listagem/duplicação/controladores: RED com 65 testes, 23 falhas e 4 erros por comportamentos ausentes; os 38 anteriores passaram. GREEN subsequente: 65 testes sem falhas.
+2. Conexão/identidade/segurança: contratos e testes antes das implementações. A descoberta automática de repositórios JPA foi desativada para que a configuração JDBC inicializasse; essa falha de configuração não foi contabilizada como RED de comportamento. Depois disso, o teste isolado de segurança confirmou 6 falhas e 1 erro nos comportamentos ainda ausentes.
+3. Regressão de JSON: mapper inicialmente serializava LocalDate em array, incompatível com o contrato de datas ISO. `JsonFormatoTest` foi escrito e executado primeiro (RED: 1 falha), seguido da correção no mapper. Teste permanente preservado.
+4. Correção de especificação autorizada explicitamente pelo usuário: `SegurancaTest.tokenCsrfPermiteEscritaAutenticada` criava uma sessão para obter o token e outra para enviá-lo. Alterado somente `.session(sessao())` para `.session(sessao)` no GET. Expectativas mantidas. Adicionado teste separado que exige 403 para token de outra sessão; a segurança não foi afrouxada.
+5. Aceite integrado `ApiPostgresTest`: Spring MVC, filtros, identidade, serviço, repositório e PostgreSQL reais; sessão autenticada sintética somente no teste. Exercita criação, consulta, acesso de outro usuário, rollback por custo ausente, edição, envio, listagem, detalhe do gerente e duplicação.
+6. Validação final: `./scripts/testar-backend.ps1 -Empacotar -BaixarDependencias` — **84 testes, zero falhas, zero erros, zero ignorados; BUILD SUCCESS**. Cluster de testes encerrado pelo script. JAR Spring Boot gerado em `backend/target/cotacao-backend-0.1.0-SNAPSHOT.jar`.
+7. Smoke HTTP do JAR real com configuração do `.env`: servidor iniciado temporariamente em loopback/porta dinâmica; GET de cotações anônimo = 401; X-Usuario/X-Perfil forjados = 401; GET CSRF = 200. Processo encerrado após a verificação. Nenhuma tabela ou dado da aplicação foi alterado nesta etapa.
+
+Próxima etapa: fluxo de decisões e auditoria, endpoints de cadastros e integração/validação Waffle/NTLM. Frontend Angular permanece posterior aos contratos da API.
