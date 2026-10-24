@@ -27,6 +27,8 @@ As páginas e os arquivos estáticos são públicos para permitir carregar a int
 
 ## SSO Windows
 
+O roteiro de preparação, testes e aceite pela TI está em [HOMOLOGACAO-AD.md](HOMOLOGACAO-AD.md), incluindo os limites da validação local sem domínio/rede corporativa.
+
 ```powershell
 ./scripts/iniciar-backend.ps1 -WindowsSso
 ```

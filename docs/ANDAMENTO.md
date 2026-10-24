@@ -145,3 +145,11 @@ Validação final executada: `./scripts/empacotar-aplicacao.ps1`. Frontend: 65 t
 Smoke do JAR executável: páginas `/`, `/cotacoes` e `/cotacao/nova`, JavaScript e CSS responderam 200; `/api/usuario` com cabeçalhos de identidade forjados respondeu 401. Nenhum banco real foi acessado nesta etapa.
 
 Validação visual no navegador com API fictícia local: paginação, recomendação de 30,78 para 250 × 0,1231, confirmação de aprovação mista e ausência de escritas antes da confirmação. Capturas em `docs/preview` usam dados fictícios. O servidor temporário foi encerrado; ele não integra o produto nem o pacote. A homologação positiva de AD permanece pendente por este computador não pertencer ao domínio corporativo.
+
+## Preparação da homologação AD — 24/10/2026
+
+Criado `docs/HOMOLOGACAO-AD.md` com pré-requisitos para a TI, matriz de aceite dos quatro perfis, rejeições, confirmação, concorrência e CSRF. Distinguem-se testes isolados, provider nativo local, login local positivo e aceite do domínio corporativo. A limitação atual envolve também a ausência de conectividade corporativa; a associação da máquina ao domínio, sozinha, não determina todos os cenários Windows.
+
+Nova conferência do JAR integrado com Waffle real ativado, porta temporária em loopback e DATABASE_URL fictícia: interface 200; API anônima, token inválido e Basic/identidade forjada retornaram 401 com desafios Negotiate/NTLM, sem Basic. Processo encerrado ao final. Não foram utilizadas credenciais de usuários nem acessado o banco da aplicação.
+
+Comando executado: `./scripts/testar-backend.ps1 -Testes 'FiltroWindowsTest,WaffleConfigurationTest,WaffleApiPostgresTest,WaffleDependenciasTest,SpaControllerTest,SpaSegurancaTest'`. Resultado: 25 testes, zero falhas, erros ou ignorados; PostgreSQL isolado iniciado e encerrado pelo script. Nenhum código de produção ou teste foi alterado nesta etapa documental. Login nativo positivo e homologação AD continuam pendentes.

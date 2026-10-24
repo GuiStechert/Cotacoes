@@ -15,3 +15,5 @@ Testes de filtro usam Waffle real e simulam somente SecurityFilterProviderCollec
 Limite da validação: este computador foi inspecionado e não está ingressado em domínio (PartOfDomain=false). A integração com AD, políticas de navegador/intranet, DNS e TLS precisa ser homologada no ambiente corporativo. Não alterar registro do Windows nem relaxar políticas de loopback/browser para contornar falhas locais. Nenhuma validação simulada equivale a homologação corporativa.
 
 Smoke nativo realizado: JAR com SSO ativado iniciou no Windows com provider real; desafio inicial, token inválido e Basic/cabeçalho forjado resultaram em 401. Não foram usadas credenciais de usuários nem o banco da aplicação. Login positivo com AD permanece não homologado.
+
+Roteiro de homologação: [HOMOLOGACAO-AD.md](HOMOLOGACAO-AD.md). O fato de uma máquina não pertencer ao domínio, isoladamente, não impede todos os cenários de autenticação Windows. Neste ambiente, a ausência de acesso à rede corporativa também limita a validação. Login nativo positivo com conta local ainda não foi executado e não substituiria o aceite com contas e políticas corporativas.
