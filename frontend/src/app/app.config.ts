@@ -1,0 +1,2 @@
+import {ApplicationConfig} from '@angular/core';import {provideRouter,withInMemoryScrolling} from '@angular/router';import {provideHttpClient,withInterceptors,withNoXsrfProtection} from '@angular/common/http';import {ROUTES} from './routes';import {csrfInterceptor} from './acesso';
+export const appConfig:ApplicationConfig={providers:[provideRouter(ROUTES,withInMemoryScrolling({scrollPositionRestoration:'enabled',anchorScrolling:'enabled'})),provideHttpClient(withNoXsrfProtection(),withInterceptors([csrfInterceptor]))]};

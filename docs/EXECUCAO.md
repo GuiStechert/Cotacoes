@@ -1,13 +1,17 @@
-# Executar o backend
+# Executar a aplicação
 
-Requisitos locais: JDK 25, PostgreSQL 18, Maven 3.9.11 em `.tools/apache-maven-3.9.11`.
+Requisitos locais: JDK 25, PostgreSQL 18, Maven 3.9.11 em `.tools/apache-maven-3.9.11` e Node.js 24.14.1 com npm para construir o frontend Angular 21.
 
 ```powershell
-./scripts/testar-backend.ps1 -Empacotar -BaixarDependencias
+./scripts/empacotar-aplicacao.ps1 -InstalarDependencias
 ./scripts/iniciar-backend.ps1
 ```
 
-Depois do primeiro download, `-BaixarDependencias` pode ser omitido. O script de testes inicia um PostgreSQL isolado na porta 55432, cria schemas exclusivos por teste e encerra o cluster ao terminar. Não utiliza o banco da aplicação. A suíte deve executar diretamente no terminal, sem redirecionar o script externo.
+Depois do primeiro download, `-InstalarDependencias` pode ser omitido. O empacotador testa e constrói o Angular, executa os testes Java, gera o JAR e confere os arquivos estáticos e suas licenças. O script de testes inicia um PostgreSQL isolado na porta 55432, cria schemas exclusivos por teste e encerra o cluster ao terminar. Não utiliza o banco da aplicação. A suíte deve executar diretamente no terminal, sem redirecionar o script externo.
+
+Abra `http://127.0.0.1:8080`. O JAR serve o Angular e a API na mesma origem. As três telas são lista/fila (`/cotacoes`), edição/consulta comercial (`/cotacao/nova` ou `/cotacao/{id}`) e aprovação (`/aprovacao/{id}`). A sessão obtém o perfil do backend; não existe seletor de perfil. Sem SSO autenticado, a interface apresenta a falha de acesso.
+
+Para desenvolver a interface, execute `npm start` dentro de `frontend`, com o backend na porta 8080. O proxy encaminha `/api` para o backend. Use `./scripts/testar-frontend.ps1 -Build` para os testes e build, ou `./scripts/testar-backend.ps1` para a suíte Java. Ao empacotar diretamente pelo Maven, construa antes o Angular para incluir seus arquivos atualizados no JAR.
 
 O inicializador lê DATABASE_URL do ambiente ou do `.env` da raiz sem imprimir o valor e sem passá-lo como argumento da linha de comando. O schema padrão é `cotacao`, já criado no banco configurado. A aplicação não cria tabelas no startup nem altera a migração V1 aplicada.
 
@@ -19,7 +23,7 @@ java -jar backend/target/cotacao-backend-0.1.0-SNAPSHOT.jar
 
 Por padrão, HTTP escuta em `127.0.0.1:8080`. GET `/api/csrf` fornece um token da sessão. As rotas de cotações exigem autenticação Spring Security; escritas também exigem esse token no cabeçalho indicado pela resposta, usando a mesma sessão.
 
-Sem ativar o SSO Windows, requisições externas continuam recebendo 401. X-Usuario, X-Perfil e Basic não concedem acesso. Não há usuário/senha padrão ou perfil de execução com impersonação. A integração Waffle/NTLM está disponível com ativação explícita, mas a homologação com Active Directory ainda é necessária.
+As páginas e os arquivos estáticos são públicos para permitir carregar a interface e apresentar erros de acesso. Sem ativar o SSO Windows, a API continua recebendo 401. X-Usuario, X-Perfil e Basic não concedem acesso. Não há usuário/senha padrão ou perfil de execução com impersonação. A integração Waffle/NTLM está disponível com ativação explícita, mas a homologação com Active Directory ainda é necessária.
 
 ## SSO Windows
 
@@ -84,4 +88,4 @@ O campo `aprovado` é obrigatório; reprovar não exige comentário. Somente o p
 
 Os catálogos são somente leitura. Produtos inativos permanecem na consulta com `ativo=false`, para identificar produtos de cotações históricas; novas inclusões continuam bloqueadas pelo backend. O catálogo Comercial não retorna custo real nem consulta sua tabela. O catálogo do aprovador retorna somente o custo real vigente, sem expor todo o histórico.
 
-Ainda pendentes: homologação corporativa Waffle/NTLM, integração/atualização dos cadastros e frontend Angular. Unidade e precisão da sugestão de quantidade ainda precisam ser definidas antes da implementação desse cálculo na interface.
+Ainda pendentes: homologação corporativa Waffle/NTLM e integração/atualização dos cadastros. A recomendação usa dose × área na mesma unidade do produto, sem conversão por embalagem, com duas casas e arredondamento para cima. O usuário aplica a sugestão explicitamente; quantidades manuais com mais de duas casas efetivas são rejeitadas.

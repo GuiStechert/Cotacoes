@@ -11,6 +11,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.http.HttpMethod;
 @Configuration
 public class SegurancaConfiguration {
  @Bean public HttpSessionSecurityContextRepository contextosWindows(){return new HttpSessionSecurityContextRepository();}
@@ -26,7 +27,9 @@ public class SegurancaConfiguration {
    .logout(AbstractHttpConfigurer::disable)
    .requestCache(c->c.requestCache(new NullRequestCache()))
    .sessionManagement(c->c.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
-   .authorizeHttpRequests(a->a.requestMatchers("/api/csrf").permitAll().anyRequest().authenticated())
+   .authorizeHttpRequests(a->a.requestMatchers("/api/csrf").permitAll()
+    .requestMatchers(HttpMethod.GET,"/","/index.html","/cotacoes","/cotacao/*","/aprovacao/*","/*.js","/*.css","/favicon.ico","/media/**").permitAll()
+    .anyRequest().authenticated())
    .exceptionHandling(e->e
     .authenticationEntryPoint((request,response,ex)->{
      if(filtroWindows!=null)FiltroWindows.naoAutenticado(response,false);

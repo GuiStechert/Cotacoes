@@ -144,7 +144,7 @@ public class CotacoesService {
   if(!repository.clienteExiste(e.clienteId()))throw new Erro("CLIENTE_INEXISTENTE");
   var itens=new ArrayList<ItemEntrada>();
   for(var item:e.itens()) {
-   if(item==null||item.produtoId()==null||!positivo(item.quantidade())||!positivo(item.preco()))throw new Erro("DADOS_INVALIDOS");
+   if(item==null||item.produtoId()==null||!positivo(item.quantidade())||item.quantidade().stripTrailingZeros().scale()>2||!positivo(item.preco()))throw new Erro("DADOS_INVALIDOS");
    if(!repository.produtoAtivo(item.produtoId()))throw new Erro("PRODUTO_INDISPONIVEL");
    itens.add(new ItemEntrada(item.produtoId(),item.quantidade(),Financeiro.preco(item.preco())));
   }

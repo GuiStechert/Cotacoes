@@ -1,0 +1,24 @@
+<div class="eyebrow">ÁREA DE TRABALHO <span>/</span> {{fila()?'APROVAÇÕES':'COMERCIAL'}}</div>
+<header class="page-heading"><div><h1>{{fila()?'Sua fila de aprovação':'Cotações'}}</h1><p>{{fila()?'Analise os produtos e confirme suas decisões.':'Do primeiro rascunho à decisão final, em um só lugar.'}}</p></div>
+ @if(sessao.pode(['COMERCIAL'])){<a class="btn primary" routerLink="/cotacao/nova"><span aria-hidden="true">＋</span> Nova cotação</a>}
+ @else{<a class="btn" routerLink="/cotacoes" [queryParams]="fila()?{}:{fila:1}">{{fila()?'Todas as atribuídas':'Ver pendentes'}}</a>}
+</header>
+@if(erro()){<div class="notice error" role="alert">{{erro()}} <button type="button" class="text-button" (click)="carregar()">Tentar novamente</button></div>}
+<section class="panel" aria-label="Lista de cotações">
+ <div class="panel-bar"><div><h2>{{fila()?'Aguardando sua decisão':'Todas as cotações'}}</h2><span class="count">{{pagina().total}} registros</span></div><span class="subtle">20 por página</span></div>
+ @if(!fila()){
+ <form class="filters" (ngSubmit)="filtrar()">
+  <label>Estado<select name="estado" [ngModel]="filtro.status||''" (ngModelChange)="filtro.status=$event"><option value="">Todos os estados</option>@for(s of ['RASCUNHO','PENDENTE_APROVACAO','APROVADA','APROVADA_PARCIAL','REPROVADA'];track s){<option [value]="s">{{rotulos[s]}}</option>}</select></label>
+  <label>Cliente<select name="cliente" [ngModel]="filtro.clienteId||''" (ngModelChange)="filtro.clienteId=$event"><option value="">Todos os clientes</option>@for(c of clientes();track c.id){<option [value]="c.id">{{c.nome}}</option>}</select></label>
+  <label>Criação de<input type="date" name="inicio" [(ngModel)]="filtro.inicio"></label><label>Até<input type="date" name="fim" [(ngModel)]="filtro.fim"></label>
+  <button class="btn" type="submit" [disabled]="carregando()">Aplicar filtros</button>
+ </form>}
+ <div class="table-scroll" [attr.aria-busy]="carregando()"><table><thead><tr><th>Cotação / criação</th><th>Cliente</th><th>Solicitante</th><th class="numeric">Preço total</th><th>Estado</th><th>Alçada</th><th class="actions-heading">Ações</th></tr></thead>
+ <tbody>@for(r of pagina().conteudo;track r.id){<tr><td><strong class="reference">#{{r.id.slice(0,8).toUpperCase()}}</strong><small>{{r.criadoEm|date:'dd/MM/yyyy · HH:mm':'-0400'}}</small></td><td class="client-name">{{r.clienteNome}}</td><td>{{r.solicitanteNome}}</td><td class="numeric amount">{{moeda(r.precoTotal)}}</td><td><span class="status" [attr.data-status]="r.status">{{rotulos[r.status]}}</span></td><td>{{rotulos[r.perfilAprovador||'']||'—'}}</td><td><div class="row-actions">
+  @if(sessao.pode(['COMERCIAL'])&&r.podeEditar&&r.status==='RASCUNHO'){<a data-action="editar" [routerLink]="['/cotacao',r.id]">Editar</a>}
+  @else{<a [routerLink]="[sessao.pode(['COMERCIAL'])?'/cotacao':'/aprovacao',r.id]">{{!sessao.pode(['COMERCIAL'])&&r.status==='PENDENTE_APROVACAO'?'Analisar':'Consultar'}}</a>}
+  @if(sessao.pode(['COMERCIAL'])&&r.podeDuplicar&&r.status!=='RASCUNHO'){<button type="button" data-action="duplicar" (click)="duplicar(r.id)" [disabled]="!!duplicando()">{{duplicando()===r.id?'Criando…':'Duplicar'}}</button>}
+ </div></td></tr>}@empty{<tr><td colspan="7"><div class="empty"><span aria-hidden="true">▤</span><h3>{{carregando()?'Carregando cotações…':'Nenhuma cotação encontrada'}}</h3><p>{{fila()?'Sua fila não tem pendências neste momento.':'Ajuste os filtros ou crie uma nova cotação.'}}</p></div></td></tr>}</tbody></table></div>
+ <footer class="pagination"><span>Exibindo <strong>{{inicio}}–{{fim}}</strong> de <strong>{{pagina().total}}</strong></span><div><button class="btn small" type="button" (click)="anterior()" [disabled]="carregando()||pagina().pagina===0">← Anterior</button><span>Página {{pagina().pagina+1}} de {{pagina().totalPaginas||1}}</span><button class="btn small" type="button" (click)="proxima()" [disabled]="carregando()||pagina().pagina+1>=pagina().totalPaginas">Próxima →</button></div></footer>
+</section>
+<p class="page-note"><span class="dot"></span> Custos e margens são calculados no envio. Apenas rascunhos podem ser editados.</p>

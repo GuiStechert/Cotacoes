@@ -5,3 +5,7 @@
 **/target/
 .idea/
 *.log
+**/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/out-tsc/

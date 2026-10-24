@@ -1,0 +1,8 @@
+{
+ "$schema":"./node_modules/@angular/cli/lib/config/schema.json","version":1,"cli":{"analytics":false},
+ "projects":{"cotacao":{"projectType":"application","root":"","sourceRoot":"src","architect":{
+  "build":{"builder":"@angular/build:application","options":{"browser":"src/main.ts","index":"src/index.html","tsConfig":"tsconfig.app.json","styles":["src/styles.scss"],"outputPath":"dist/cotacao"},"configurations":{"production":{"outputHashing":"all","budgets":[{"type":"initial","maximumWarning":"650kB","maximumError":"900kB"}]},"development":{"optimization":false,"sourceMap":true}},"defaultConfiguration":"production"},
+  "serve":{"builder":"@angular/build:dev-server","configurations":{"production":{"buildTarget":"cotacao:build:production"},"development":{"buildTarget":"cotacao:build:development"}},"defaultConfiguration":"development"},
+  "test":{"builder":"@angular/build:unit-test","options":{"buildTarget":"cotacao:build:development","tsConfig":"tsconfig.spec.json","runner":"vitest"}}
+ }}}
+}

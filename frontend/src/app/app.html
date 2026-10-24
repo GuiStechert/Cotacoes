@@ -1,0 +1,20 @@
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+<aside class="sidebar"><a class="brand" routerLink="/cotacoes" aria-label="ADM Cotações"><strong>ADM<span></span></strong><div>Cotações<span>Gestão comercial</span></div></a>
+ <div class="nav-section">ÁREA DE TRABALHO</div>
+ <nav aria-label="Navegação principal"><a routerLink="/cotacoes" routerLinkActive="active"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>Cotações</a>
+ @if(sessao.pode(['COMERCIAL'])){<a routerLink="/cotacao/nova" routerLinkActive="active"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nova cotação</a>}
+ </nav>
+ <div class="sidebar-bottom"><div class="workflow-icon" aria-hidden="true">↗</div><strong>Decisões com clareza.</strong><p>Propostas, margens e aprovações conectadas.</p><div class="internal-tag"><span class="dot"></span> Uso interno</div></div>
+</aside>
+<div class="workspace"><header class="topbar"><span class="topbar-title">Sistema de Cotações <span>/</span> <strong>Aprovação de margens</strong></span>
+ @if(sessao.usuario();as u){<div class="user"><div><strong>{{u.nome}}</strong><small>{{rotulos[u.perfil]}}</small></div><span class="avatar" aria-hidden="true">{{iniciais}}</span></div>}
+ @else{<span class="subtle">Acesso corporativo</span>}
+</header>
+<main id="conteudo" class="content">
+ @if(sessao.carregando()){<div class="auth-state panel"><div class="spinner" aria-hidden="true"></div><h1>Identificando sua conta</h1><p>Aguarde um instante para acessar suas cotações.</p></div>}
+ @else if(!sessao.usuario()){<div class="auth-state panel"><span class="auth-symbol" aria-hidden="true">↗</span><div class="eyebrow">ACESSO CORPORATIVO</div><h1>Vamos conectar sua conta</h1><p role="alert">{{sessao.erro()||'Não foi possível identificar sua conta corporativa.'}}</p><button class="btn primary" type="button" (click)="tentarNovamente()">Tentar novamente</button><small>Se o acesso não estiver liberado, procure o responsável pelo cadastro.</small></div>}
+ @else{
+  @if(sessao.aviso()){<div class="notice success" role="status"><span>{{sessao.aviso()}}</span><button type="button" class="text-button" aria-label="Fechar aviso" (click)="sessao.aviso.set('')">×</button></div>}
+  <router-outlet />
+ }
+</main><footer class="app-footer">ADM <span>·</span> Sistema de Cotações e Aprovação de Margens</footer></div>

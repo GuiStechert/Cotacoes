@@ -5,8 +5,8 @@
 - Primeira entrega Java: núcleo financeiro isolado, BigDecimal com DECIMAL128, testes JUnit 5. Sem banco, relógio ou serviços externos no cálculo; não são necessários mocks nesse núcleo.
 - Próxima etapa escolhida: tabelas PostgreSQL antes do Angular. Históricos independentes, snapshots no envio, autorização e transações precisam sustentar a API usada pelas três telas.
 - O arquivo `.env` contém DATABASE_URL; conexão validada com SELECT 1. A migração V1 foi testada em PostgreSQL 18 isolado e aplicada em transação ao schema próprio `cotacao`, com checksum SHA256 registrado em `schema_migrations`. Nenhuma tabela preexistente foi alterada.
-- Implementados: aplicação Spring executável, API de cotações/decisões/auditoria/fila e consultas de clientes/produtos/usuário; JDBC e transações, autorização pelo cadastro ativo no PostgreSQL, Spring Security, CSRF e integração Waffle/NTLM com ativação explícita. Ainda pendentes: homologação corporativa de SSO, integração/atualização dos cadastros e frontend. O sistema ainda não representa o MVP completo.
-- Antes da sugestão de quantidade: esclarecer unidade da dose e precisão por produto, conforme definições futuras do README.
+- Implementados: aplicação Spring executável, API de cotações/decisões/auditoria/fila e consultas de clientes/produtos/usuário; JDBC e transações, autorização pelo cadastro ativo no PostgreSQL, Spring Security, CSRF e integração Waffle/NTLM com ativação explícita; frontend Angular com três telas integrado ao JAR. Ainda pendentes: homologação corporativa de SSO e integração/atualização dos cadastros. A implantação corporativa depende dessas etapas.
+- Definições confirmadas pelo usuário: dose e quantidade na mesma unidade do produto, sem conversão por embalagem; quantidade com duas casas decimais; recomendação sempre arredondada para cima (1,231 → 1,24).
 
 ## Execução
 
@@ -17,7 +17,7 @@ $env:JAVA_HOME='C:\Program Files\Java\jdk-25.0.4.1'
 .tools/apache-maven-3.9.11/bin/mvn.cmd -f backend/pom.xml test
 ```
 
-O pom prepara as dependências Spring Web, Data JPA, Security e PostgreSQL. A aplicação HTTP ainda não foi implementada: não há autenticação provisória ou endpoints expostos.
+O pom prepara as dependências Spring Web, Data JPA, Security e PostgreSQL. As entregas abaixo registram a evolução até a aplicação HTTP e o frontend atuais. Consulte `docs/EXECUCAO.md` para executar a versão integrada.
 
 ## Evidência de testes — 24/10/2026
 
@@ -133,3 +133,15 @@ Validação completa: `./scripts/testar-backend.ps1 -Empacotar` — **160 testes
 Smoke nativo do JAR: execução temporária em Windows/loopback/porta dinâmica com `--cotacao.auth.windows.enabled=true`, provider nativo real e DATABASE_URL fictícia, sem credenciais de usuários. Confirmados 401 com desafios Negotiate/NTLM (sem Basic), rejeição 401 de token inválido e de Basic/cabeçalho forjado. Processo encerrado depois da verificação. Isso valida carga do componente nativo e comportamento negativo do protocolo, não um login corporativo positivo.
 
 Próxima etapa: frontend Angular com exatamente três telas e paleta ADM. A homologação AD continua dependente de ambiente corporativo; unidade/conversão e precisão da quantidade recomendada precisam ser esclarecidas antes de implementar sua sugestão. O restante das telas pode progredir de forma independente dessas definições.
+
+## Frontend Angular e distribuição integrada — 24/10/2026
+
+Contrato em `docs/CONTRATO-FRONTEND.md`. Entregues as três telas ADM: lista/fila com paginação de 20 registros, cotação comercial e aprovação. Formulários consultam cadastros reais pela API; as decisões ficam locais até a confirmação explícita. A interface oculta indicadores desatualizados após edição e nunca calcula nem apresenta margem real ao Comercial. A sugestão usa a unidade e o arredondamento confirmados pelo usuário.
+
+TDD: os contratos financeiros, transporte HTTP, sessão, permissões, telas e navegação receberam testes antes da implementação, com RED observado. Regressões permanentes cobrem atualização das escolhas de aprovação, filtros inicialmente vazios e restauração da rolagem. O usuário autorizou corrigir somente a preparação do teste de rolagem para inicializar o Angular de verdade; a expectativa foi preservada e a falha foi novamente confirmada sem a configuração de rolagem. Nenhum teste Java anterior foi alterado.
+
+Validação final executada: `./scripts/empacotar-aplicacao.ps1`. Frontend: 65 testes aprovados e build de produção concluído. Backend: 164 testes, zero falhas, erros ou ignorados, com PostgreSQL isolado. Total: 229 testes aprovados. Os quatro testes Java novos cobrem precisão da quantidade, rotas da SPA e proteção da API. `scripts/verificar-pacote.ps1` detectou inicialmente a ausência das licenças Angular no JAR; o recurso Maven foi corrigido e a conferência permanente passou, incluindo a ausência de credenciais e fixtures locais.
+
+Smoke do JAR executável: páginas `/`, `/cotacoes` e `/cotacao/nova`, JavaScript e CSS responderam 200; `/api/usuario` com cabeçalhos de identidade forjados respondeu 401. Nenhum banco real foi acessado nesta etapa.
+
+Validação visual no navegador com API fictícia local: paginação, recomendação de 30,78 para 250 × 0,1231, confirmação de aprovação mista e ausência de escritas antes da confirmação. Capturas em `docs/preview` usam dados fictícios. O servidor temporário foi encerrado; ele não integra o produto nem o pacote. A homologação positiva de AD permanece pendente por este computador não pertencer ao domínio corporativo.
