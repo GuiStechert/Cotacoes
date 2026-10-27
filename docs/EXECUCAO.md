@@ -1,17 +1,17 @@
 # Executar a aplicação
 
-Requisitos locais: JDK 25, PostgreSQL 18, Maven 3.9.11 em `.tools/apache-maven-3.9.11` e Node.js 24.14.1 com npm para construir o frontend Angular 21.
+Requisitos locais: JDK 25, PostgreSQL 18, Maven 3.9.11 em `.tools/apache-maven-3.9.11` e Node.js 24.14.1 com npm para executar os testes do frontend Vue. A interface usa Vue 3.5.22 via CDN, sem compilação, Angular, Vite ou esbuild. Os navegadores precisam acessar cdn.jsdelivr.net; a versão é fixa e validada por SRI.
 
 ```powershell
 ./scripts/empacotar-aplicacao.ps1 -InstalarDependencias
 ./scripts/iniciar-backend.ps1
 ```
 
-Depois do primeiro download, `-InstalarDependencias` pode ser omitido. O empacotador testa e constrói o Angular, executa os testes Java, gera o JAR e confere os arquivos estáticos e suas licenças. O script de testes inicia um PostgreSQL isolado na porta 55432, cria schemas exclusivos por teste e encerra o cluster ao terminar. Não utiliza o banco da aplicação. A suíte deve executar diretamente no terminal, sem redirecionar o script externo.
+Depois do primeiro download, `-InstalarDependencias` pode ser omitido. O empacotador testa o Vue e verifica os arquivos estáticos, executa os testes Java, gera o JAR e confere os arquivos estáticos e suas licenças. O script de testes inicia um PostgreSQL isolado na porta 55432, cria schemas exclusivos por teste e encerra o cluster ao terminar. Não utiliza o banco da aplicação. A suíte deve executar diretamente no terminal, sem redirecionar o script externo.
 
-Abra `http://127.0.0.1:8080`. O JAR serve o Angular e a API na mesma origem. As três telas são lista/fila (`/cotacoes`), edição/consulta comercial (`/cotacao/nova` ou `/cotacao/{id}`) e aprovação (`/aprovacao/{id}`). A sessão obtém o perfil do backend; não existe seletor de perfil. Sem SSO autenticado, a interface apresenta a falha de acesso.
+Abra `http://127.0.0.1:8080`. O JAR serve o frontend Vue e a API na mesma origem. As três telas são lista/fila (`/cotacoes`), edição/consulta comercial (`/cotacao/nova` ou `/cotacao/{id}`) e aprovação (`/aprovacao/{id}`). A sessão obtém o perfil do backend; não existe seletor de perfil. Sem SSO autenticado, a interface apresenta a falha de acesso.
 
-Para desenvolver a interface, execute `npm start` dentro de `frontend`, com o backend na porta 8080. O proxy encaminha `/api` para o backend. Use `./scripts/testar-frontend.ps1 -Build` para os testes e build, ou `./scripts/testar-backend.ps1` para a suíte Java. Ao empacotar diretamente pelo Maven, construa antes o Angular para incluir seus arquivos atualizados no JAR.
+Para desenvolver a interface, edite os arquivos de frontend/public e reempacote o backend, que serve interface e API na mesma origem. Use `./scripts/testar-frontend.ps1 -Instalar -Build` para instalar dependências de teste, executar testes e verificar os arquivos estáticos, ou `./scripts/testar-backend.ps1` para a suíte Java. `npm run build` apenas verifica sintaxe e recursos; não compila nem executa esbuild. Maven inclui diretamente os arquivos de frontend/public. Use clean package ao empacotar manualmente para remover recursos legados. O JAR final não exige Node, npm ou ferramentas de build no servidor.
 
 O inicializador lê DATABASE_URL do ambiente ou do `.env` da raiz sem imprimir o valor e sem passá-lo como argumento da linha de comando. O schema padrão é `cotacao`, já criado no banco configurado. A aplicação não cria tabelas no startup nem altera a migração V1 aplicada.
 

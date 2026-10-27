@@ -1,11 +1,21 @@
 # Decisões e andamento
 
+## Migração Vue CDN — 27/10/2026
+
+Solicitação: substituir Angular por Vue via CDN porque esbuild.exe é bloqueado no servidor; remover o frontend Angular após validar a substituição. Contratos financeiros, perfis, API, três telas e confirmações foram mantidos. A implementação usa Vue 3.5.22 global de produção, SRI e JavaScript nativo; decimal.js permanece local. O Maven inclui frontend/public diretamente no JAR, e o empacotamento executa clean para remover bundles antigos. Angular, TypeScript, Vitest runner, esbuild, configurações e fontes antigos foram removidos. As bibliotecas de asserts/mocks são usadas pelo runner nativo do Node, sem bundler.
+
+TDD: expectativas dos testes de regras, telas e moldura foram portadas para montagem real Vue/jsdom, preservando os asserts; transporte, sessão e navegação receberam testes equivalentes com mocks das fronteiras. RED: 53 testes falharam contra contratos ainda sem comportamento. Dois testes de inicialização também falharam antes da implementação. O teste Java VueRecursosTest falhou com 401 para /app.html antes de liberar explicitamente os quatro templates públicos. A proteção da API foi preservada. Regressões novas reproduziram envio de CSRF a URL externa e bloqueio do formulário ao limpar a área opcional; ambas falharam antes das correções.
+
+Validação executada: npm ci --ignore-scripts --no-audit --no-fund; ./scripts/testar-frontend.ps1 -Build: 59 testes, zero falhas/ignorados, verificação de sintaxe/recursos concluída. ./scripts/testar-backend.ps1 -Empacotar -BaixarDependencias: 165 testes, zero falhas/erros/ignorados, PostgreSQL isolado, clean package concluído. Para evitar o bloqueio de autoanexação do Mockito neste ambiente, essa execução usou JAVA_TOOL_OPTIONS com -javaagent apontando ao mockito-core 5.17.0 já instalado em .tools/repository. scripts/verificar-pacote.ps1 confirmou módulos, templates, CSS e licenças e ausência de bundles Angular e fixtures no JAR.
+
+Limites: navegadores precisam acessar cdn.jsdelivr.net para carregar Vue; indisponibilidade apresenta mensagem explícita. Testes são determinísticos e usam cópia local idêntica ao CDN validada pelo hash SRI. A homologação de SSO no domínio corporativo continua pendente. Instruções atualizadas em EXECUCAO.md e CONTRATO-FRONTEND.md.
+
 - Documentação original copiada para a raiz; `.env` é local e ignorado pelo Git.
 - Confirmação do usuário: arredondar para baixo somente o percentual exibido das margens; a alçada utiliza a razão precisa.
 - Primeira entrega Java: núcleo financeiro isolado, BigDecimal com DECIMAL128, testes JUnit 5. Sem banco, relógio ou serviços externos no cálculo; não são necessários mocks nesse núcleo.
 - Próxima etapa escolhida: tabelas PostgreSQL antes do Angular. Históricos independentes, snapshots no envio, autorização e transações precisam sustentar a API usada pelas três telas.
 - O arquivo `.env` contém DATABASE_URL; conexão validada com SELECT 1. A migração V1 foi testada em PostgreSQL 18 isolado e aplicada em transação ao schema próprio `cotacao`, com checksum SHA256 registrado em `schema_migrations`. Nenhuma tabela preexistente foi alterada.
-- Implementados: aplicação Spring executável, API de cotações/decisões/auditoria/fila e consultas de clientes/produtos/usuário; JDBC e transações, autorização pelo cadastro ativo no PostgreSQL, Spring Security, CSRF e integração Waffle/NTLM com ativação explícita; frontend Angular com três telas integrado ao JAR. Ainda pendentes: homologação corporativa de SSO e integração/atualização dos cadastros. A implantação corporativa depende dessas etapas.
+- Implementados: aplicação Spring executável, API de cotações/decisões/auditoria/fila e consultas de clientes/produtos/usuário; JDBC e transações, autorização pelo cadastro ativo no PostgreSQL, Spring Security, CSRF e integração Waffle/NTLM com ativação explícita; frontend Vue via CDN com três telas integrado ao JAR. Ainda pendentes: homologação corporativa de SSO e integração/atualização dos cadastros. A implantação corporativa depende dessas etapas.
 - Definições confirmadas pelo usuário: dose e quantidade na mesma unidade do produto, sem conversão por embalagem; quantidade com duas casas decimais; recomendação sempre arredondada para cima (1,231 → 1,24).
 
 ## Execução

@@ -4,5 +4,5 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class SpaController {
  @GetMapping({"/","/cotacoes","/cotacao/{id}","/aprovacao/{id}"})
- public String interfaceAngular(){return "forward:/index.html";}
+ public String interfaceWeb(){return "forward:/index.html";}
 }

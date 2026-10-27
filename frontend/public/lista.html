@@ -1,0 +1,24 @@
+<div class="eyebrow">ÁREA DE TRABALHO <span>/</span> {{fila()?'APROVAÇÕES':'COMERCIAL'}}</div>
+<header class="page-heading"><div><h1>{{fila()?'Sua fila de aprovação':'Cotações'}}</h1><p>{{fila()?'Analise os produtos e confirme suas decisões.':'Do primeiro rascunho à decisão final, em um só lugar.'}}</p></div>
+ <template v-if="sessao.pode(['COMERCIAL'])"><a class="btn primary" href="/cotacao/nova"><span aria-hidden="true">＋</span> Nova cotação</a></template>
+ <template v-else><a class="btn" :href="fila()?'/cotacoes':'/cotacoes?fila=1'" >{{fila()?'Todas as atribuídas':'Ver pendentes'}}</a></template>
+</header>
+<template v-if="erro()"><div class="notice error" role="alert">{{erro()}} <button type="button" class="text-button" @click="carregar()">Tentar novamente</button></div></template>
+<section class="panel" aria-label="Lista de cotações">
+ <div class="panel-bar"><div><h2>{{fila()?'Aguardando sua decisão':'Todas as cotações'}}</h2><span class="count">{{pagina().total}} registros</span></div><span class="subtle">20 por página</span></div>
+ <template v-if="!fila()">
+ <form class="filters" @submit.prevent="filtrar()">
+  <label>Estado<select name="estado" :value="filtro.status||''" @change="filtro.status=$event.target.value"><option value="">Todos os estados</option><template v-for="(s, $index) in ['RASCUNHO','PENDENTE_APROVACAO','APROVADA','APROVADA_PARCIAL','REPROVADA']" :key="s"><option :value="s">{{rotulos[s]}}</option></template></select></label>
+  <label>Cliente<select name="cliente" :value="filtro.clienteId||''" @change="filtro.clienteId=$event.target.value"><option value="">Todos os clientes</option><template v-for="(c, $index) in clientes()" :key="c.id"><option :value="c.id">{{c.nome}}</option></template></select></label>
+  <label>Criação de<input type="date" name="inicio" v-model="filtro.inicio"></label><label>Até<input type="date" name="fim" v-model="filtro.fim"></label>
+  <button class="btn" type="submit" :disabled="carregando()">Aplicar filtros</button>
+ </form></template>
+ <div class="table-scroll" :aria-busy="carregando()"><table><thead><tr><th>Cotação / criação</th><th>Cliente</th><th>Solicitante</th><th class="numeric">Preço total</th><th>Estado</th><th>Alçada</th><th class="actions-heading">Ações</th></tr></thead>
+ <tbody><template v-for="(r, $index) in pagina().conteudo" :key="r.id"><tr><td><strong class="reference">#{{r.id.slice(0,8).toUpperCase()}}</strong><small>{{dataHora(r.criadoEm)}}</small></td><td class="client-name">{{r.clienteNome}}</td><td>{{r.solicitanteNome}}</td><td class="numeric amount">{{moeda(r.precoTotal)}}</td><td><span class="status" :data-status="r.status">{{rotulos[r.status]}}</span></td><td>{{rotulos[r.perfilAprovador||'']||'—'}}</td><td><div class="row-actions">
+  <template v-if="sessao.pode(['COMERCIAL'])&&r.podeEditar&&r.status==='RASCUNHO'"><a data-action="editar" :href="['/cotacao',r.id]">Editar</a></template>
+  <template v-else><a :href="[sessao.pode(['COMERCIAL'])?'/cotacao':'/aprovacao',r.id]">{{!sessao.pode(['COMERCIAL'])&&r.status==='PENDENTE_APROVACAO'?'Analisar':'Consultar'}}</a></template>
+  <template v-if="sessao.pode(['COMERCIAL'])&&r.podeDuplicar&&r.status!=='RASCUNHO'"><button type="button" data-action="duplicar" @click="duplicar(r.id)" :disabled="!!duplicando()">{{duplicando()===r.id?'Criando…':'Duplicar'}}</button></template>
+ </div></td></tr></template><template v-if="!(pagina().conteudo).length"><tr><td colspan="7"><div class="empty"><span aria-hidden="true">▤</span><h3>{{carregando()?'Carregando cotações…':'Nenhuma cotação encontrada'}}</h3><p>{{fila()?'Sua fila não tem pendências neste momento.':'Ajuste os filtros ou crie uma nova cotação.'}}</p></div></td></tr></template></tbody></table></div>
+ <footer class="pagination"><span>Exibindo <strong>{{inicio}}–{{fim}}</strong> de <strong>{{pagina().total}}</strong></span><div><button class="btn small" type="button" @click="anterior()" :disabled="carregando()||pagina().pagina===0">← Anterior</button><span>Página {{pagina().pagina+1}} de {{pagina().totalPaginas||1}}</span><button class="btn small" type="button" @click="proxima()" :disabled="carregando()||pagina().pagina+1>=pagina().totalPaginas">Próxima →</button></div></footer>
+</section>
+<p class="page-note"><span class="dot"></span> Custos e margens são calculados no envio. Apenas rascunhos podem ser editados.</p>

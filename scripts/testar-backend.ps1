@@ -22,7 +22,9 @@ try {
   if ($BaixarDependencias) { $opcoes = @() }
   if ($Testes) { $opcoes += "-Dtest=$Testes" }
   $alvo = if ($Empacotar) { 'package' } else { 'test' }
-  & $maven @opcoes -f backend/pom.xml '-Dmaven.repo.local=.tools/repository' $alvo
+  $alvos = @($alvo)
+  if ($Empacotar) { $alvos = @('clean',$alvo) }
+  & $maven @opcoes -f backend/pom.xml '-Dmaven.repo.local=.tools/repository' @alvos
   $resultado = $LASTEXITCODE
  } finally {
   & "$PostgresBin/pg_ctl.exe" -D .tools/pg-test -m fast -w stop

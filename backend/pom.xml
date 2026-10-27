@@ -52,8 +52,7 @@
   <build>
     <resources>
       <resource><directory>src/main/resources</directory></resource>
-      <resource><directory>../frontend/dist/cotacao/browser</directory><targetPath>static</targetPath><filtering>false</filtering></resource>
-      <resource><directory>../frontend/dist/cotacao</directory><targetPath>static</targetPath><includes><include>3rdpartylicenses.txt</include></includes><filtering>false</filtering></resource>
+      <resource><directory>../frontend/public</directory><targetPath>static</targetPath><excludes><exclude>package.json</exclude></excludes><filtering>false</filtering></resource>
     </resources>
     <plugins>
       <plugin>

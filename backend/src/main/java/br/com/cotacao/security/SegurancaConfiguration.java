@@ -28,7 +28,7 @@ public class SegurancaConfiguration {
    .requestCache(c->c.requestCache(new NullRequestCache()))
    .sessionManagement(c->c.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
    .authorizeHttpRequests(a->a.requestMatchers("/api/csrf").permitAll()
-    .requestMatchers(HttpMethod.GET,"/","/index.html","/cotacoes","/cotacao/*","/aprovacao/*","/*.js","/*.css","/favicon.ico","/media/**").permitAll()
+    .requestMatchers(HttpMethod.GET,"/","/index.html","/app.html","/lista.html","/cotacao.html","/aprovacao.html","/cotacoes","/cotacao/*","/aprovacao/*","/*.js","/*.css","/favicon.ico","/media/**").permitAll()
     .anyRequest().authenticated())
    .exceptionHandling(e->e
     .authenticationEntryPoint((request,response,ex)->{

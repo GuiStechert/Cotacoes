@@ -6,7 +6,7 @@ Aplicação web interna para cadastrar cotações comerciais com múltiplos prod
 
 ## 2. Stack e implantação
 
-- **Frontend:** Angular + TypeScript, com identidade visual baseada em `tema_ADM.json`.
+- **Frontend:** Vue 3 via CDN + JavaScript nativo (sem compilação/esbuild), com identidade visual baseada em `tema_ADM.json`.
 - **Backend:** Java + Spring Boot, API REST, Spring Data JPA e Spring Security (autorização por perfis e integração com identidade Windows autenticada).
 - **Banco de dados:** PostgreSQL.
 - **Acesso:** navegador na rede interna corporativa; inicialmente hospedado no computador corporativo do desenvolvedor, preferencialmente via HTTPS e DNS interno.
@@ -18,7 +18,7 @@ Aplicação web interna para cadastrar cotações comerciais com múltiplos prod
 
 - **Mecanismo pretendido:** Windows Integrated Authentication por **Negotiate**, com suporte a **NTLM** conforme a infraestrutura corporativa; Kerberos pode ser negociado quando disponível. A escolha definitiva do componente que valida NTLM depende de testes e das políticas da TI.
 - **Hospedagem inicial:** frontend e backend serão disponibilizados na rede interna a partir do computador corporativo do desenvolvedor. A máquina precisa permanecer ligada, acessível na rede e autorizada pelas políticas e firewall corporativos.
-- **Responsabilidade do navegador:** Chrome/Edge pode negociar automaticamente as credenciais Windows com um servidor configurado para autenticação integrada, sujeito a políticas de intranet e navegador. **Angular/JavaScript puro não lê `whoami`, nem extrai diretamente o usuário Windows.**
+- **Responsabilidade do navegador:** Chrome/Edge pode negociar automaticamente as credenciais Windows com um servidor configurado para autenticação integrada, sujeito a políticas de intranet e navegador. **Vue/JavaScript puro não lê `whoami`, nem extrai diretamente o usuário Windows.**
 - **Responsabilidade do servidor:** um componente confiável (por exemplo, IIS com Windows Authentication atuando como proxy reverso, se disponível) valida a autenticação e fornece a identidade ao Spring Boot. O Spring Security aplica as permissões após resolver a conta na tabela `usuarios`.
 - **Confiança no proxy:** se a identidade for transmitida ao Spring Boot por cabeçalho, o backend deve estar inacessível diretamente aos clientes, aceitar o cabeçalho apenas do proxy autenticador e impedir cabeçalhos forjados. Nunca considerar um `X-Usuario` fornecido pelo navegador como autenticação válida.
 - **`whoami` no backend:** identifica apenas a conta que executa o processo Java, não o visitante.
@@ -39,7 +39,7 @@ Aplicação web interna para cadastrar cotações comerciais com múltiplos prod
 | Consultar custo real e margem real | Não | Sim | Sim | Sim |
 | Decidir produtos pendentes | Não | Cotações atribuídas | Cotações atribuídas | Cotações atribuídas |
 
-A API deve usar DTOs separados para o Comercial e os aprovadores. **Nunca enviar `custo_real` ou `margem_real` ao Comercial**, nem apenas escondê-los no Angular.
+A API deve usar DTOs separados para o Comercial e os aprovadores. **Nunca enviar `custo_real` ou `margem_real` ao Comercial**, nem apenas escondê-los no frontend.
 
 ## 4. Dados da cotação
 
@@ -341,7 +341,7 @@ O backend deve verificar que os IDs pertencem à cotação e que o solicitante t
 - Quantidade e preço unitário maiores que zero.
 - Vencimento não anterior ao faturamento.
 - Produtos existentes e ativos para novas inclusões; custos obtidos dos históricos `produto_custos` e `produto_custos_reais`, usando o registro mais recente de cada um.
-- Margens e alçadas recalculadas no backend; nunca confiar em cálculos recebidos do Angular.
+- Margens e alçadas recalculadas no backend; nunca confiar em cálculos recebidos do frontend.
 - Comercial não pode decidir aprovações nem consultar custo/margem real.
 - Aprovadores só decidem cotações de sua fila atribuída.
 - Impedir decisões duplicadas ou alterações concorrentes inconsistentes.
@@ -365,7 +365,7 @@ O backend deve verificar que os IDs pertencem à cotação e que o solicitante t
 8. A tela de aprovação inicia com todas as checkboxes marcadas e mostra comentário somente ao desmarcar.
 9. O backend persiste decisões individuais e consolida corretamente `APROVADA`, `APROVADA_PARCIAL` ou `REPROVADA`.
 10. Comercial não recebe custos reais nem margens reais na API.
-11. O Angular segue a paleta ADM.
+11. O frontend Vue segue a paleta ADM.
 12. O frontend possui exatamente três telas: cotação comercial, aprovação restrita a aprovadores e listagem paginada de cotações.
 13. A listagem retorna 20 registros por página, com total, filtros e navegação corretos.
 14. Apenas rascunhos podem ser editados; o botão duplicar só aparece em estados diferentes de `RASCUNHO` e cria um novo rascunho independente.
